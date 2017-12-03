@@ -40,9 +40,9 @@ namespace Oxide.Plugins
             public string url { get; set; }
             public string payload { get; set; }
             public float time { get; set; }
-            public Action<bool> callback { get; set; }
+            public Action<int> callback { get; set; }
 
-            public SavedMessages(string url, string payload, float time, Action<bool> callback)
+            public SavedMessages(string url, string payload, float time, Action<int> callback)
             {
                 this.url = url;
                 this.payload = payload;
@@ -298,7 +298,6 @@ namespace Oxide.Plugins
         #endregion
 
         #region API
-        private void API_SendFancyMessage(string webhookURL, string embedName, int embedColor, string json, Action<bool> foreignCallback)
         {
             List<Fields> fields = new List<Fields>();
             JArray Jarray = (JArray)JsonConvert.DeserializeObject(json);
@@ -314,7 +313,6 @@ namespace Oxide.Plugins
             var payload = message.toJSON(message);
             Request(webhookURL, payload, (Callback) => foreignCallback.Invoke(Callback));
         }
-        private void API_SendTextMessage(string webhookURL, string content, bool tts, Action<bool> foreignCallback)
         {
             FancyMessage message = new FancyMessage(content, tts, null);
             var payload = message.toJSON(message);
@@ -339,7 +337,7 @@ namespace Oxide.Plugins
             }
         }
 
-        private void Request(string url, string payload, Action<bool> callback = null)
+        private void Request(string url, string payload, Action<int> callback = null)
         {
             bool exists = savedmessages.Exists(x => x.payload == payload);
             webrequest.Enqueue(url, payload, (code, response) =>
@@ -349,7 +347,7 @@ namespace Oxide.Plugins
                         if (response != null)
                         {
                             JObject json = JObject.Parse(response);
-                            if (json["message"].ToString().Contains("rate limit") && exists == false)
+                            if (code == 429)
                             {
                                 float seconds = float.Parse(Math.Ceiling((double)(int)json["retry_after"] / 1000).ToString());
                                 savedmessages.Add(new SavedMessages(url, payload, seconds, callback));
@@ -361,22 +359,21 @@ namespace Oxide.Plugins
                             else
                             {
                                 PrintWarning($"Discord rejected that payload! Responded with \"{json["message"].ToString()}\" Code: {code}");
-                                callback.Invoke(code != 200 || code != 204);
+                                callback.Invoke(code);
+                                return;
                             }
                         }
                         else
                         {
                             PrintWarning($"Discord didn't respond (down?) Code: {code}");
-                            callback.Invoke(code != 200 || code != 204);
+                            callback.Invoke(code);
+                            return;
                         }
                     }
-                    else
+                    callback.Invoke(code);
+                    if (exists == true)
                     {
-                        callback.Invoke(code == 200 || code == 204);
-                        if (exists == true)
-                        {
-                            savedmessages.RemoveAt(0);
-                        }
+                        savedmessages.RemoveAt(0);
                     }
                 }, this, Core.Libraries.RequestMethod.POST);
         }
@@ -439,7 +436,7 @@ namespace Oxide.Plugins
             var payload = message.toJSON(message);
             Request(MessageURL, payload, (Callback) =>
             {
-                if (Callback)
+                if (Callback == 200 || Callback == 204)
                 {
                     SendMessage(player, GetLang("MessageSent", player.Id));
                     if (storedData.Players.ContainsKey(player.Id))
@@ -450,8 +447,10 @@ namespace Oxide.Plugins
                         storedData.Players[player.Id].messageCooldown = DateTime.UtcNow;
                     }
                 }
-                else
+                else if (Callback != 429)
+                {
                     SendMessage(player, GetLang("MessageNotSent", player.Id));
+                }
 
             });
         }
@@ -496,7 +495,6 @@ namespace Oxide.Plugins
             {
                 var time = (storedData.Players[player.Id].reportCooldown.AddSeconds(ReportCooldown) - DateTime.UtcNow).Seconds;
                 SendMessage(player, GetLang("Cooldown", player.Id, time));
-
                 return;
             }
             if (args.Length < 2)
@@ -534,6 +532,15 @@ namespace Oxide.Plugins
                     SendMessage(player, GetLang("ReportTooShort", player.Id));
                     return;
                 }
+                if (storedData.Players.ContainsKey(target.Id))
+                {
+                    storedData.Players[target.Id].reports++;
+                }
+                else
+                {
+                    storedData.Players.Add(target.Id, new PlayerData());
+                    storedData.Players[target.Id].reports++;
+                }
                 var status = target.IsConnected ? lang.GetMessage("Online", null) : lang.GetMessage("Offline", null);
                 List<Fields> fields = new List<Fields>();
                 fields.Add(new Fields(GetLang("Embed_ReportTarget"), $"[{target.Name}](https://steamcommunity.com/profiles/{target.Id})", true));
@@ -542,20 +549,10 @@ namespace Oxide.Plugins
                 fields.Add(new Fields(GetLang("Embed_ReportReason"), string.Join(" ", reason.ToArray()), false));
                 fields.Add(new Fields(GetLang("Embed_ReportCount"), storedData.Players[target.Id].reports.ToString(), true));
                 FancyMessage message = new FancyMessage(ReportAlert == true ? "@here" : null, false, new FancyMessage.Embeds[1] { new FancyMessage.Embeds(GetLang("Embed_MessageTitle"), ReportColor, fields) });
-
                 Request(ReportURL, message.toJSON(message), (Callback) =>
                 {
-                    if (Callback)
+                    if (Callback == 200 || Callback == 204)
                     {
-                        if (storedData.Players.ContainsKey(target.Id))
-                        {
-                            storedData.Players[target.Id].reports++;
-                        }
-                        else
-                        {
-                            storedData.Players.Add(target.Id, new PlayerData());
-                            storedData.Players[target.Id].reports++;
-                        }
                         SendMessage(player, GetLang("ReportSent", player.Id));
                         if (storedData.Players.ContainsKey(player.Id))
                             storedData.Players[player.Id].reportCooldown = DateTime.UtcNow;
@@ -565,7 +562,7 @@ namespace Oxide.Plugins
                             storedData.Players[player.Id].reportCooldown = DateTime.UtcNow;
                         }
                     }
-                    else
+                    else if (Callback != 429)
                     {
                         SendMessage(player, GetLang("ReportNotSent", player.Id));
                     }
