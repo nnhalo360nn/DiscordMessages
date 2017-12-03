@@ -9,7 +9,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Oxide.Plugins
 {
-    [Info("DiscordMessages", "Slut", "1.6.5", ResourceId = 2486)]
+    [Info("DiscordMessages", "Slut", "1.6.6", ResourceId = 2486)]
     class DiscordMessages : CovalencePlugin
     {
 
@@ -298,6 +298,7 @@ namespace Oxide.Plugins
         #endregion
 
         #region API
+        private void API_SendFancyMessage(string webhookURL, string embedName, int embedColor, string json, Action<int> foreignCallback = null)
         {
             List<Fields> fields = new List<Fields>();
             JArray Jarray = (JArray)JsonConvert.DeserializeObject(json);
@@ -313,6 +314,7 @@ namespace Oxide.Plugins
             var payload = message.toJSON(message);
             Request(webhookURL, payload, (Callback) => foreignCallback.Invoke(Callback));
         }
+        private void API_SendTextMessage(string webhookURL, string content, bool tts, Action<int> foreignCallback = null)
         {
             FancyMessage message = new FancyMessage(content, tts, null);
             var payload = message.toJSON(message);
