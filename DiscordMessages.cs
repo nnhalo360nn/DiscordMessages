@@ -9,7 +9,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Oxide.Plugins
 {
-    [Info("DiscordMessages", "Slut", "1.6.6", ResourceId = 2486)]
+    [Info("DiscordMessages", "Slut", "1.6.7", ResourceId = 2486)]
     class DiscordMessages : CovalencePlugin
     {
 
@@ -77,7 +77,7 @@ namespace Oxide.Plugins
                 this.embeds = embeds;
             }
 
-            public string toJSON(FancyMessage fancymessage) => JsonConvert.SerializeObject(fancymessage);
+            public string toJSON() => JsonConvert.SerializeObject(this);
         }
         public class Fields
         {
@@ -287,7 +287,9 @@ namespace Oxide.Plugins
 
         private string GetLang(string key, string id = null, params object[] args)
         {
-            return string.Format(lang.GetMessage(key, this, id), args);
+            if (args.Length > 0)
+                return string.Format(lang.GetMessage(key, this, id), args);
+            else return lang.GetMessage(key, this, id);
         }
 
         private void SendMessage(IPlayer player, string message)
@@ -311,13 +313,13 @@ namespace Oxide.Plugins
                 embedColor = 3329330;
             }
             FancyMessage message = new FancyMessage(null, false, new FancyMessage.Embeds[1] { new FancyMessage.Embeds(embedName, 3329330, fields) });
-            var payload = message.toJSON(message);
+            var payload = message.toJSON();
             Request(webhookURL, payload, (Callback) => foreignCallback.Invoke(Callback));
         }
         private void API_SendTextMessage(string webhookURL, string content, bool tts, Action<int> foreignCallback = null)
         {
             FancyMessage message = new FancyMessage(content, tts, null);
-            var payload = message.toJSON(message);
+            var payload = message.toJSON();
             Request(webhookURL, payload, (Callback) => foreignCallback.Invoke(Callback));
         }
         #endregion
@@ -397,7 +399,7 @@ namespace Oxide.Plugins
         {
             string discordMessage = GetLang("PlayerChatFormat", null, name, message);
             FancyMessage dmessage = new FancyMessage(discordMessage, ChatTTS, null);
-            var payload = dmessage.toJSON(dmessage);
+            var payload = dmessage.toJSON();
             Request(ChatURL, payload);
         }
         #endregion
@@ -435,7 +437,7 @@ namespace Oxide.Plugins
             fields.Add(new Fields(GetLang("Embed_MessagePlayer"), $"[{ player.Name }](https://steamcommunity.com/profiles/{player.Id})", true));
             fields.Add(new Fields(GetLang("Embed_MessageMessage"), text, false));
             FancyMessage message = new FancyMessage(MessageAlert == true ? "@here" : null, false, new FancyMessage.Embeds[1] { new FancyMessage.Embeds(GetLang("Embed_MessageTitle"), MessageColor, fields) });
-            var payload = message.toJSON(message);
+            var payload = message.toJSON();
             Request(MessageURL, payload, (Callback) =>
             {
                 if (Callback == 200 || Callback == 204)
@@ -458,8 +460,6 @@ namespace Oxide.Plugins
         }
 
         #endregion
-
-
         #region Report
 
         private bool onReportCooldown(IPlayer player)
@@ -551,7 +551,7 @@ namespace Oxide.Plugins
                 fields.Add(new Fields(GetLang("Embed_ReportReason"), string.Join(" ", reason.ToArray()), false));
                 fields.Add(new Fields(GetLang("Embed_ReportCount"), storedData.Players[target.Id].reports.ToString(), true));
                 FancyMessage message = new FancyMessage(ReportAlert == true ? "@here" : null, false, new FancyMessage.Embeds[1] { new FancyMessage.Embeds(GetLang("Embed_MessageTitle"), ReportColor, fields) });
-                Request(ReportURL, message.toJSON(message), (Callback) =>
+                Request(ReportURL, message.toJSON(), (Callback) =>
                 {
                     if (Callback == 200 || Callback == 204)
                     {
@@ -573,7 +573,6 @@ namespace Oxide.Plugins
         }
 
         #endregion
-
         #region Mutes
 
         string FormatTime(TimeSpan time) => $"{(time.Days == 0 ? string.Empty : $"{time.Days} day(s)")}{(time.Days != 0 && time.Hours != 0 ? $", " : string.Empty)}{(time.Hours == 0 ? string.Empty : $"{time.Hours} hour(s)")}{(time.Hours != 0 && time.Minutes != 0 ? $", " : string.Empty)}{(time.Minutes == 0 ? string.Empty : $"{time.Minutes} minute(s)")}{(time.Minutes != 0 && time.Seconds != 0 ? $", " : string.Empty)}{(time.Seconds == 0 ? string.Empty : $"{time.Seconds} second(s)")}";
@@ -593,7 +592,7 @@ namespace Oxide.Plugins
             fields.Add(new Fields(GetLang("Embed_MutePlayer"), !player.Id.Equals("server_console") ? $"[{player.Name}](https://steamcommunity.com/profiles/{player.Id})" : player.Name, true));
             fields.Add(new Fields(GetLang("Embed_MuteTime"), timed ? FormatTime(expireDate) : "Permanent", true));
             FancyMessage message = new FancyMessage(null, false, new FancyMessage.Embeds[1] { new FancyMessage.Embeds(GetLang("Embed_MuteTitle"), MuteColor, fields) });
-            Request(MuteURL, message.toJSON(message));
+            Request(MuteURL, message.toJSON());
         }
 
         #endregion
@@ -642,24 +641,15 @@ namespace Oxide.Plugins
                 SendMessage(player, GetLang("AlreadyBanned", player.Id, target.Name));
                 return;
             }
-            else
-            {
-                ServerUsers.Set(ulong.Parse(target.Id), ServerUsers.UserGroup.Banned, target.Name, reason);
-                ServerUsers.Save();
-            }
-#else
-            target.Ban(reason);
 #endif
+            target.Ban(GetLang("BanPrefix", target.Id) + reason);
             if (Announce) server.Broadcast(GetLang("BanMessage", null, target.Name, reason));
-            if (target.IsConnected)
-            {
-                target.Kick(GetLang("BanPrefix", target.Id, reason));
-            }
             SendBanMessage(target.Name, target.Id, reason, player.Name, player.Id);
         }
 
         private void ExectueBanNotExists(string input, IPlayer player, string reason)
         {
+#if RUST
             ulong output = 0;
             ulong.TryParse(input, out output);
             if (output.IsSteamId())
@@ -675,9 +665,12 @@ namespace Oxide.Plugins
                     ServerUsers.Save();
                     if (Announce) server.Broadcast(GetLang("BanMessage", null, "Unnamed", reason));
                     SendBanMessage("Unnamed", output.ToString(), reason, player.Name, player.Id);
-                    player.Reply("Target not fouund");
+                    player.Reply("Target not found");
                 }
             }
+#else
+            return;
+#endif
         }
 
 
@@ -688,12 +681,12 @@ namespace Oxide.Plugins
             fields.Add(new Fields(GetLang("Embed_BanPlayer"), sourceId != null && !sourceId.Equals("server_console") ? $"[{sourceName}](https://steamcommunity.com/profiles/{sourceId})" : sourceName, true));
             fields.Add(new Fields(GetLang("Embed_BanReason"), reason, false));
             FancyMessage message = new FancyMessage(null, false, new FancyMessage.Embeds[1] { new FancyMessage.Embeds(GetLang("Embed_BanTitle"), ReportColor, fields) });
-            Request(BanURL, message.toJSON(message));
+            Request(BanURL, message.toJSON());
         }
 
         #endregion
 
-        #region Heleprs
+        #region Helpers
 
         private void SaveData()
         {
