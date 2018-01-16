@@ -9,7 +9,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Oxide.Plugins
 {
-    [Info("DiscordMessages", "Slut", "1.6.7", ResourceId = 2486)]
+    [Info("DiscordMessages", "Slut", "1.7.0", ResourceId = 2486)]
     class DiscordMessages : CovalencePlugin
     {
 
@@ -49,7 +49,6 @@ namespace Oxide.Plugins
                 this.time = time;
                 this.callback = callback;
             }
-
         }
         public class FancyMessage
         {
@@ -306,15 +305,12 @@ namespace Oxide.Plugins
             JArray Jarray = (JArray)JsonConvert.DeserializeObject(json);
             foreach (var field in Jarray)
             {
+                Puts(field["name"].ToString() + field["value"] + field["inline"]);
                 fields.Add(new Fields(field["name"].ToString(), field["value"].ToString(), bool.Parse(field["inline"].ToString())));
             }
-            if (embedColor == 0)
-            {
-                embedColor = 3329330;
-            }
-            FancyMessage message = new FancyMessage(null, false, new FancyMessage.Embeds[1] { new FancyMessage.Embeds(embedName, 3329330, fields) });
+            FancyMessage message = new FancyMessage(null, false, new FancyMessage.Embeds[1] { new FancyMessage.Embeds(embedName, embedColor == 0 ? 3329330 : embedColor, fields) });
             var payload = message.toJSON();
-            Request(webhookURL, payload, (Callback) => foreignCallback.Invoke(Callback));
+            Request(webhookURL, payload, (Callback) => foreignCallback(Callback));
         }
         private void API_SendTextMessage(string webhookURL, string content, bool tts, Action<int> foreignCallback = null)
         {
@@ -346,7 +342,7 @@ namespace Oxide.Plugins
             bool exists = savedmessages.Exists(x => x.payload == payload);
             webrequest.Enqueue(url, payload, (code, response) =>
                 {
-                    if (response == null || ((code != 200) && (code != 204)))
+                    if ((code != 200) && (code != 204))
                     {
                         if (response != null)
                         {
@@ -363,21 +359,27 @@ namespace Oxide.Plugins
                             else
                             {
                                 PrintWarning($"Discord rejected that payload! Responded with \"{json["message"].ToString()}\" Code: {code}");
-                                callback.Invoke(code);
-                                return;
                             }
                         }
                         else
                         {
                             PrintWarning($"Discord didn't respond (down?) Code: {code}");
-                            callback.Invoke(code);
-                            return;
                         }
                     }
-                    callback.Invoke(code);
-                    if (exists == true)
+                    else
                     {
-                        savedmessages.RemoveAt(0);
+                        if (exists == true)
+                        {
+                            savedmessages.RemoveAt(0);
+                        }
+                    }
+                    try
+                    {
+                        callback?.Invoke(code);
+                    }
+                    catch (Exception ex)
+                    {
+                        Interface.Oxide.LogException("[DiscordMessages] Request callback raised an exception!", ex);
                     }
                 }, this, Core.Libraries.RequestMethod.POST);
         }
@@ -395,7 +397,7 @@ namespace Oxide.Plugins
             HandleMessage(player.Name, message);
             return null;
         }
-        private void HandleMessage(string name, string message, Action<bool> callback = null)
+        private void HandleMessage(string name, string message)
         {
             string discordMessage = GetLang("PlayerChatFormat", null, name, message);
             FancyMessage dmessage = new FancyMessage(discordMessage, ChatTTS, null);
@@ -416,7 +418,7 @@ namespace Oxide.Plugins
             return false;
         }
 
-        private void MessageCommand(IPlayer player, string command, string[] args, Action<bool> callback)
+        private void MessageCommand(IPlayer player, string command, string[] args)
         {
             if (!MessageEnabled)
                 return;
@@ -577,11 +579,11 @@ namespace Oxide.Plugins
 
         string FormatTime(TimeSpan time) => $"{(time.Days == 0 ? string.Empty : $"{time.Days} day(s)")}{(time.Days != 0 && time.Hours != 0 ? $", " : string.Empty)}{(time.Hours == 0 ? string.Empty : $"{time.Hours} hour(s)")}{(time.Hours != 0 && time.Minutes != 0 ? $", " : string.Empty)}{(time.Minutes == 0 ? string.Empty : $"{time.Minutes} minute(s)")}{(time.Minutes != 0 && time.Seconds != 0 ? $", " : string.Empty)}{(time.Seconds == 0 ? string.Empty : $"{time.Seconds} second(s)")}";
 
-        private void OnBetterChatTimeMuted(IPlayer target, IPlayer player, TimeSpan expireDate, Action<bool> callback = null) => SendMute(target, player, expireDate, true, callback);
+        private void OnBetterChatTimeMuted(IPlayer target, IPlayer player, TimeSpan expireDate) => SendMute(target, player, expireDate, true);
 
-        private void OnBetterChatMuted(IPlayer target, IPlayer player, Action<bool> callback) => SendMute(target, player, TimeSpan.Zero, false, callback);
+        private void OnBetterChatMuted(IPlayer target, IPlayer player) => SendMute(target, player, TimeSpan.Zero, false);
 
-        private void SendMute(IPlayer target, IPlayer player, TimeSpan expireDate, bool timed, Action<bool> callback = null)
+        private void SendMute(IPlayer target, IPlayer player, TimeSpan expireDate, bool timed)
         {
             if (!MuteEnabled)
                 return;
@@ -665,7 +667,6 @@ namespace Oxide.Plugins
                     ServerUsers.Save();
                     if (Announce) server.Broadcast(GetLang("BanMessage", null, "Unnamed", reason));
                     SendBanMessage("Unnamed", output.ToString(), reason, player.Name, player.Id);
-                    player.Reply("Target not found");
                 }
             }
 #else
@@ -674,7 +675,7 @@ namespace Oxide.Plugins
         }
 
 
-        private void SendBanMessage(string name, string bannedId, string reason, string sourceName, string sourceId, Action<bool> callback = null)
+        private void SendBanMessage(string name, string bannedId, string reason, string sourceName, string sourceId)
         {
             List<Fields> fields = new List<Fields>();
             fields.Add(new Fields(GetLang("Embed_BanTarget"), $"[{name}](https://steamcommunity.com/profiles/{bannedId})", true));
