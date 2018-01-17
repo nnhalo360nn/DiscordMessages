@@ -9,7 +9,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Oxide.Plugins
 {
-    [Info("DiscordMessages", "Slut", "1.7.0", ResourceId = 2486)]
+    [Info("DiscordMessages", "Slut", "1.7.1", ResourceId = 2486)]
     class DiscordMessages : CovalencePlugin
     {
 
@@ -305,18 +305,17 @@ namespace Oxide.Plugins
             JArray Jarray = (JArray)JsonConvert.DeserializeObject(json);
             foreach (var field in Jarray)
             {
-                Puts(field["name"].ToString() + field["value"] + field["inline"]);
                 fields.Add(new Fields(field["name"].ToString(), field["value"].ToString(), bool.Parse(field["inline"].ToString())));
             }
             FancyMessage message = new FancyMessage(null, false, new FancyMessage.Embeds[1] { new FancyMessage.Embeds(embedName, embedColor == 0 ? 3329330 : embedColor, fields) });
             var payload = message.toJSON();
-            Request(webhookURL, payload, (Callback) => foreignCallback(Callback));
+            Request(webhookURL, payload, (Callback) => foreignCallback?.Invoke(Callback));
         }
         private void API_SendTextMessage(string webhookURL, string content, bool tts, Action<int> foreignCallback = null)
         {
             FancyMessage message = new FancyMessage(content, tts, null);
             var payload = message.toJSON();
-            Request(webhookURL, payload, (Callback) => foreignCallback.Invoke(Callback));
+            Request(webhookURL, payload, (Callback) => foreignCallback?.Invoke(Callback));
         }
         #endregion
 
@@ -342,7 +341,7 @@ namespace Oxide.Plugins
             bool exists = savedmessages.Exists(x => x.payload == payload);
             webrequest.Enqueue(url, payload, (code, response) =>
                 {
-                    if ((code != 200) && (code != 204))
+                    if (code != 200 && code != 204)
                     {
                         if (response != null)
                         {
@@ -366,12 +365,9 @@ namespace Oxide.Plugins
                             PrintWarning($"Discord didn't respond (down?) Code: {code}");
                         }
                     }
-                    else
+                    else if (exists == true)
                     {
-                        if (exists == true)
-                        {
-                            savedmessages.RemoveAt(0);
-                        }
+                        savedmessages.RemoveAt(0);
                     }
                     try
                     {
