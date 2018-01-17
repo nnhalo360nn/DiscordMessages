@@ -94,9 +94,8 @@ namespace Oxide.Plugins
         #region Variables
 
         public enum CooldownType { ReportCooldown, MessageCooldown }
-        private static StoredData storedData;
+        private StoredData storedData;
         List<SavedMessages> savedmessages = new List<SavedMessages>();
-        private DiscordMessages instance;
 
         #endregion
 
