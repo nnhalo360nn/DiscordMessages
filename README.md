@@ -13,9 +13,9 @@ All of these features can be enabled/disabled via the config.
 
 ## Commands
 
-() = Required - <> = Optional
+() = Required - {} = Optional
 - /report (player) (message) - This will send a report to the discord channel.
-- /ban (player) <message> - This will ban the player and send it to the specified discord channel.
+- /ban (player) {message} - This will ban the player and send it to the specified discord channel.
 - /message (message) - Sends a message to discord.
 
 ## Permissions
