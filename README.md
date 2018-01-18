@@ -24,3 +24,28 @@ The default permissions are as followed, they are changeable via the configurati
 - discordmessages.report
 - discordmessages.ban
 - discordmessages.message
+
+
+## API
+
+There are two API methods. API_SendFancyMessage will send an Embedded message while API_SendTextMessage will send a generic text message.
+```cs
+DiscordMessages?.Call("API_SendFancyMessage", (string)WebhookURL, (string)EmbedTitle, (int)EmbedColor, (JSON)Fields);
+DiscordMessages?.Call("API_SendTextMessage", (string)WebhookURL, (string)Message);
+ ```
+ 
+ In order to create the fields required for an Embedded message you simply create an fields object with an array of fields as follows.
+ 
+```cs
+object fields = new[]
+{
+  new {
+    name = "Field1 Title", value = "Field1 Value", inline = true
+  },
+  new {
+    name = "Field2 Title", value = "Field2 Value", inline = false
+  }
+};
+string json = JsonConvert.SerializeObject(fields);
+DiscordMessages?.Call("API_SendFancyMessage", (string)WebhookURL, (string)EmbedTitle, (int)EmbedColor, json);
+```
