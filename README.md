@@ -20,7 +20,6 @@ All of these features can be enabled/disabled via the config.
 
 ## Permissions
 
-The default permissions are as followed, they are changeable via the configuration.
 - discordmessages.report
 - discordmessages.ban
 - discordmessages.message
