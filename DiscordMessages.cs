@@ -111,8 +111,8 @@ namespace Oxide.Plugins
         private bool ChatTTS = false;
         private bool BanEnabled = true;
         private bool MessageEnabled = true;
-        private bool MessageAlert = false;
-        private bool ReportAlert = false;
+        private string MessageAlert = "";
+        private string ReportAlert = "";
         private bool MuteEnabled = true;
         private bool Announce = true;
         private int ReportCooldown = 30;
@@ -195,7 +195,7 @@ namespace Oxide.Plugins
             CheckCfg<string>("Mutes - Webhook URL", ref MuteURL);
             CheckCfg<string>("Reports - Webhook URL", ref ReportURL);
             CheckCfg<bool>("Reports - Enabled", ref ReportEnabled);
-            CheckCfg<bool>("Reports - Alert Channel", ref ReportAlert);
+            CheckCfg<string>("Reports - Alert Role", ref ReportAlert);
             CheckCfg<int>("Reports - Cooldown", ref ReportCooldown);
             CheckCfg<bool>("Player Chat - Enabled", ref ChatEnabled);
             CheckCfg<string>("Player Chat - Webhook URL", ref ChatURL);
@@ -203,7 +203,7 @@ namespace Oxide.Plugins
             CheckCfg<bool>("Message - Enabled", ref MessageEnabled);
             CheckCfg<string>("Message - Webhook URL", ref MessageURL);
             CheckCfg<int>("Message - Cooldown", ref MessageCooldown);
-            CheckCfg<bool>("Message - Alert Channel", ref MessageAlert);
+            CheckCfg<string>("Message - Alert Role", ref MessageAlert);
             CheckCfg<int>("Message - Embed Color (DECIMAL)", ref MessageColor);
             CheckCfg<int>("Reports - Embed Color (DECIMAL)", ref ReportColor);
             CheckCfg<int>("Ban - Embed Color (DECIMAL)", ref BanColor);
@@ -433,7 +433,7 @@ namespace Oxide.Plugins
             List<Fields> fields = new List<Fields>();
             fields.Add(new Fields(GetLang("Embed_MessagePlayer"), $"[{ player.Name }](https://steamcommunity.com/profiles/{player.Id})", true));
             fields.Add(new Fields(GetLang("Embed_MessageMessage"), text, false));
-            FancyMessage message = new FancyMessage(MessageAlert == true ? "@here" : null, false, new FancyMessage.Embeds[1] { new FancyMessage.Embeds(GetLang("Embed_MessageTitle"), MessageColor, fields) });
+            FancyMessage message = new FancyMessage(MessageAlert, false, new FancyMessage.Embeds[1] { new FancyMessage.Embeds(GetLang("Embed_MessageTitle"), MessageColor, fields) });
             var payload = message.toJSON();
             Request(MessageURL, payload, (Callback) =>
             {
@@ -547,7 +547,7 @@ namespace Oxide.Plugins
                 fields.Add(new Fields(GetLang("Embed_ReportStatus"), status, true));
                 fields.Add(new Fields(GetLang("Embed_ReportReason"), string.Join(" ", reason.ToArray()), false));
                 fields.Add(new Fields(GetLang("Embed_ReportCount"), storedData.Players[target.Id].reports.ToString(), true));
-                FancyMessage message = new FancyMessage(ReportAlert == true ? "@here" : null, false, new FancyMessage.Embeds[1] { new FancyMessage.Embeds(GetLang("Embed_MessageTitle"), ReportColor, fields) });
+                FancyMessage message = new FancyMessage(ReportAlert, false, new FancyMessage.Embeds[1] { new FancyMessage.Embeds(GetLang("Embed_MessageTitle"), ReportColor, fields) });
                 Request(ReportURL, message.toJSON(), (Callback) =>
                 {
                     if (Callback == 200 || Callback == 204)
