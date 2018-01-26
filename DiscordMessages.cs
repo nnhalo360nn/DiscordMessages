@@ -298,7 +298,7 @@ namespace Oxide.Plugins
         #endregion
 
         #region API
-        private void API_SendFancyMessage(string webhookURL, string embedName, int embedColor, string json, Action<int> foreignCallback = null)
+        private void API_SendFancyMessage(string webhookURL, string embedName, int embedColor, string json)
         {
             List<Fields> fields = new List<Fields>();
             JArray Jarray = (JArray)JsonConvert.DeserializeObject(json);
@@ -308,13 +308,13 @@ namespace Oxide.Plugins
             }
             FancyMessage message = new FancyMessage(null, false, new FancyMessage.Embeds[1] { new FancyMessage.Embeds(embedName, embedColor == 0 ? 3329330 : embedColor, fields) });
             var payload = message.toJSON();
-            Request(webhookURL, payload, (Callback) => foreignCallback?.Invoke(Callback));
+            Request(webhookURL, payload);
         }
-        private void API_SendTextMessage(string webhookURL, string content, bool tts, Action<int> foreignCallback = null)
+        private void API_SendTextMessage(string webhookURL, string content, bool tts = false)
         {
             FancyMessage message = new FancyMessage(content, tts, null);
             var payload = message.toJSON();
-            Request(webhookURL, payload, (Callback) => foreignCallback?.Invoke(Callback));
+            Request(webhookURL, payload);
         }
         #endregion
 
