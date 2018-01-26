@@ -9,7 +9,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Oxide.Plugins
 {
-    [Info("DiscordMessages", "Slut", "1.7.1", ResourceId = 2486)]
+    [Info("DiscordMessages", "Slut", "1.7.2", ResourceId = 2486)]
     class DiscordMessages : CovalencePlugin
     {
 
@@ -298,7 +298,7 @@ namespace Oxide.Plugins
         #endregion
 
         #region API
-        private void API_SendFancyMessage(string webhookURL, string embedName, int embedColor, string json)
+        private void API_SendFancyMessage(string webhookURL, string embedName, string json, int embedColor = 3329330)
         {
             List<Fields> fields = new List<Fields>();
             JArray Jarray = (JArray)JsonConvert.DeserializeObject(json);
@@ -306,11 +306,11 @@ namespace Oxide.Plugins
             {
                 fields.Add(new Fields(field["name"].ToString(), field["value"].ToString(), bool.Parse(field["inline"].ToString())));
             }
-            FancyMessage message = new FancyMessage(null, false, new FancyMessage.Embeds[1] { new FancyMessage.Embeds(embedName, embedColor == 0 ? 3329330 : embedColor, fields) });
+            FancyMessage message = new FancyMessage(null, false, new FancyMessage.Embeds[1] { new FancyMessage.Embeds(embedName, embedColor, fields) });
             var payload = message.toJSON();
             Request(webhookURL, payload, (Callback) =>
             {
-                if (Callback != 200 || Callback != 204 || Callback != 429)
+                if (!(Callback == 200 || Callback == 204 || Callback == 429))
                 {
                     PrintError($"FAILED TO SEND REQUEST CODE {Callback}");
                 }
@@ -322,7 +322,7 @@ namespace Oxide.Plugins
             var payload = message.toJSON();
             Request(webhookURL, payload, (Callback) =>
             {
-                if (Callback != 200 || Callback != 204 || Callback != 429)
+                if (!(Callback == 200 || Callback == 204 || Callback == 429))
                 {
                     PrintError($"FAILED TO SEND REQUEST CODE {Callback}");
                 }
