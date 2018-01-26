@@ -308,13 +308,25 @@ namespace Oxide.Plugins
             }
             FancyMessage message = new FancyMessage(null, false, new FancyMessage.Embeds[1] { new FancyMessage.Embeds(embedName, embedColor == 0 ? 3329330 : embedColor, fields) });
             var payload = message.toJSON();
-            Request(webhookURL, payload);
+            Request(webhookURL, payload, (Callback) =>
+            {
+                if (Callback != 200 || Callback != 204 || Callback != 429)
+                {
+                    PrintError($"FAILED TO SEND REQUEST CODE {Callback}");
+                }
+            });
         }
         private void API_SendTextMessage(string webhookURL, string content, bool tts = false)
         {
             FancyMessage message = new FancyMessage(content, tts, null);
             var payload = message.toJSON();
-            Request(webhookURL, payload);
+            Request(webhookURL, payload, (Callback) =>
+            {
+                if (Callback != 200 || Callback != 204 || Callback != 429)
+                {
+                    PrintError($"FAILED TO SEND REQUEST CODE {Callback}");
+                }
+            });
         }
         #endregion
 
