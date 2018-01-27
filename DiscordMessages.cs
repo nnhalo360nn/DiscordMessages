@@ -274,7 +274,8 @@ namespace Oxide.Plugins
                 ["Embed_MessageTitle"] = "Player Message",
                 ["Embed_MessagePlayer"] = "Player",
                 ["Embed_MessageMessage"] = "Message",
-                ["Embed_MuteTime"] = "Time"
+                ["Embed_MuteTime"] = "Time",
+                ["Embed_MuteReason"] = "Reason"
             }, this, "en");
         }
 
@@ -586,11 +587,11 @@ namespace Oxide.Plugins
 
         string FormatTime(TimeSpan time) => $"{(time.Days == 0 ? string.Empty : $"{time.Days} day(s)")}{(time.Days != 0 && time.Hours != 0 ? $", " : string.Empty)}{(time.Hours == 0 ? string.Empty : $"{time.Hours} hour(s)")}{(time.Hours != 0 && time.Minutes != 0 ? $", " : string.Empty)}{(time.Minutes == 0 ? string.Empty : $"{time.Minutes} minute(s)")}{(time.Minutes != 0 && time.Seconds != 0 ? $", " : string.Empty)}{(time.Seconds == 0 ? string.Empty : $"{time.Seconds} second(s)")}";
 
-        private void OnBetterChatTimeMuted(IPlayer target, IPlayer player, TimeSpan expireDate) => SendMute(target, player, expireDate, true);
+        private void OnBetterChatTimeMuted(IPlayer target, IPlayer player, TimeSpan expireDate, string reason) => SendMute(target, player, expireDate, true, reason);
 
-        private void OnBetterChatMuted(IPlayer target, IPlayer player) => SendMute(target, player, TimeSpan.Zero, false);
+        private void OnBetterChatMuted(IPlayer target, IPlayer player, string reason) => SendMute(target, player, TimeSpan.Zero, false, reason);
 
-        private void SendMute(IPlayer target, IPlayer player, TimeSpan expireDate, bool timed)
+        private void SendMute(IPlayer target, IPlayer player, TimeSpan expireDate, bool timed, string reason)
         {
             if (!MuteEnabled)
                 return;
@@ -600,6 +601,7 @@ namespace Oxide.Plugins
             fields.Add(new Fields(GetLang("Embed_MuteTarget"), $"[{target.Name}](https://steamcommunity.com/profiles/{target.Id})", true));
             fields.Add(new Fields(GetLang("Embed_MutePlayer"), !player.Id.Equals("server_console") ? $"[{player.Name}](https://steamcommunity.com/profiles/{player.Id})" : player.Name, true));
             fields.Add(new Fields(GetLang("Embed_MuteTime"), timed ? FormatTime(expireDate) : "Permanent", true));
+            fields.Add(new Fields(GetLang("Embed_MuteReason"), reason, false));
             FancyMessage message = new FancyMessage(null, false, new FancyMessage.Embeds[1] { new FancyMessage.Embeds(GetLang("Embed_MuteTitle"), MuteColor, fields) });
             Request(MuteURL, message.toJSON());
         }
