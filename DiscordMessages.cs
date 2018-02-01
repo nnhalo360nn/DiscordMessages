@@ -246,7 +246,10 @@ namespace Oxide.Plugins
                 ["ReportSent"] = "Your report has been sent!",
                 ["MessageSent"] = "Your message has been sent!",
                 ["NotFound"] = "Unable to find player {0}",
-                ["Disallowed"] = "You have been blacklisted from reporting players.",
+                ["NoReports"] = "{0} has not been reported yet!",
+                ["ReportDisallowed"] = "You have been blacklisted from reporting players.",
+                ["ConfirmReportDisallowed"] = "You have {0} {1} from using the report feature!",
+                ["ReportReset"] = "You have reset the report count for {0}",
                 ["Cooldown"] = "You must wait {0} seconds to use this command again.",
                 ["AlreadyBanned"] = "{0} is already banned!",
                 ["NoPermission"] = "You do not have permision for this command!",
@@ -484,6 +487,39 @@ namespace Oxide.Plugins
 
         private void ReportCommand(IPlayer player, string command, string[] args)
         {
+            if (player.HasPermission(Name + "admin"))
+            {
+                var target1 = GetPlayer(args[1], player);
+                if (target1 == null) return;
+                switch (args[0])
+                {
+                    case "disable":
+                        if (storedData.Players.ContainsKey(target1.Id))
+                        {
+                            storedData.Players[target1.Id].ReportDisabled = !storedData.Players[target1.Id].ReportDisabled;
+                        }
+                        else
+                        {
+                            storedData.Players.Add(target1.Id, new PlayerData { ReportDisabled = true });
+                        }
+                        string newval = storedData.Players[target1.Id].ReportDisabled ? "disabled" : "enabled";
+                        player.Reply(GetLang("ConfirmReportDisallowed", player.Id, newval, target1.Name));
+                        break;
+                    case "reset":
+                        if (storedData.Players.ContainsKey(target1.Id))
+                        {
+                            if (storedData.Players[target1.Id].reports != 0)
+                            {
+                                storedData.Players[target1.Id].reports = 0;
+                                player.Reply(GetLang("ReportReset", player.Id, target1.Name));
+                                return;
+                            }
+                        }
+                        player.Reply(GetLang("NoReports", player.Id, target1.Name));
+                        break;
+                }
+                return;
+            }
             if ((player.Name == "Server Console") | !player.IsConnected)
                 return;
             if (ReportEnabled == false)
@@ -495,7 +531,7 @@ namespace Oxide.Plugins
             {
                 if (storedData.Players[player.Id].ReportDisabled)
                 {
-                    SendMessage(player, GetLang("Disallowed", player.Id));
+                    SendMessage(player, GetLang("ReportDisallowed", player.Id));
                     return;
                 }
             }
