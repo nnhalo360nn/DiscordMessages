@@ -9,7 +9,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Oxide.Plugins
 {
-    [Info("DiscordMessages", "Slut", "1.7.4", ResourceId = 2486)]
+    [Info("DiscordMessages", "Slut", "1.8.0", ResourceId = 2486)]
     class DiscordMessages : CovalencePlugin
     {
 
@@ -302,15 +302,9 @@ namespace Oxide.Plugins
         #endregion
 
         #region API
-        private void API_SendFancyMessage(string webhookURL, string embedName, string json, int embedColor = 3329330)
+        private void API_SendFancyMessage(string webhookURL, string embedName, string json, string content = null, int embedColor = 3329330)
         {
-            List<Fields> fields = new List<Fields>();
-            JArray Jarray = (JArray)JsonConvert.DeserializeObject(json);
-            foreach (var field in Jarray)
-            {
-                fields.Add(new Fields(field["name"].ToString(), field["value"].ToString(), bool.Parse(field["inline"].ToString())));
-            }
-            FancyMessage message = new FancyMessage(null, false, new FancyMessage.Embeds[1] { new FancyMessage.Embeds(embedName, embedColor, fields) });
+            FancyMessage message = new FancyMessage(content, false, new FancyMessage.Embeds[1] { new FancyMessage.Embeds(embedName, embedColor, JsonConvert.DeserializeObject<List<Fields>>(json)) });
             var payload = message.toJSON();
             Request(webhookURL, payload, (Callback) =>
             {
@@ -419,16 +413,6 @@ namespace Oxide.Plugins
 
         #region Message
 
-        private bool onMessageCooldown(IPlayer player)
-        {
-            if (storedData.Players.ContainsKey(player.Id))
-                if (storedData.Players[player.Id].messageCooldown.AddSeconds(MessageCooldown) > DateTime.UtcNow)
-                {
-                    return true;
-                }
-            return false;
-        }
-
         private void MessageCommand(IPlayer player, string command, string[] args)
         {
             if (!MessageEnabled)
@@ -438,7 +422,7 @@ namespace Oxide.Plugins
                 SendMessage(player, GetLang("MessageSyntax", player.Id));
                 return;
             }
-            if (onMessageCooldown(player))
+            if (OnCooldown(player, CooldownType.MessageCooldown))
             {
                 var time = (storedData.Players[player.Id].messageCooldown.AddSeconds(MessageCooldown) - DateTime.UtcNow).Seconds;
                 SendMessage(player, GetLang("Cooldown", player.Id, time));
@@ -474,16 +458,6 @@ namespace Oxide.Plugins
 
         #endregion
         #region Report
-
-        private bool onReportCooldown(IPlayer player)
-        {
-            if (storedData.Players.ContainsKey(player.Id))
-                if (storedData.Players[player.Id].reportCooldown.AddSeconds(ReportCooldown) > DateTime.UtcNow)
-                {
-                    return true;
-                }
-            return false;
-        }
 
         private void ReportCommand(IPlayer player, string command, string[] args)
         {
@@ -539,7 +513,7 @@ namespace Oxide.Plugins
             {
                 storedData.Players.Add(player.Id, new PlayerData());
             }
-            if (onReportCooldown(player))
+            if (OnCooldown(player, CooldownType.ReportCooldown))
             {
                 var time = (storedData.Players[player.Id].reportCooldown.AddSeconds(ReportCooldown) - DateTime.UtcNow).Seconds;
                 SendMessage(player, GetLang("Cooldown", player.Id, time));
@@ -619,6 +593,7 @@ namespace Oxide.Plugins
         }
 
         #endregion
+
         #region Mutes
 
         string FormatTime(TimeSpan time) => $"{(time.Days == 0 ? string.Empty : $"{time.Days} day(s)")}{(time.Days != 0 && time.Hours != 0 ? $", " : string.Empty)}{(time.Hours == 0 ? string.Empty : $"{time.Hours} hour(s)")}{(time.Hours != 0 && time.Minutes != 0 ? $", " : string.Empty)}{(time.Minutes == 0 ? string.Empty : $"{time.Minutes} minute(s)")}{(time.Minutes != 0 && time.Seconds != 0 ? $", " : string.Empty)}{(time.Seconds == 0 ? string.Empty : $"{time.Seconds} second(s)")}";
@@ -733,6 +708,28 @@ namespace Oxide.Plugins
         #endregion
 
         #region Helpers
+
+        private bool OnCooldown(IPlayer player, CooldownType type)
+        {
+            if (storedData.Players.ContainsKey(player.Id))
+            {
+                if (type == CooldownType.ReportCooldown)
+                {
+                    if (storedData.Players[player.Id].reportCooldown.AddSeconds(ReportCooldown) > DateTime.UtcNow)
+                    {
+                        return true;
+                    }
+                    else if (type == CooldownType.MessageCooldown)
+                    {
+                        if (storedData.Players[player.Id].messageCooldown.AddSeconds(MessageCooldown) > DateTime.UtcNow)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
 
         private void SaveData()
         {
