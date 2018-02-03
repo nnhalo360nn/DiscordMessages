@@ -214,7 +214,11 @@ namespace Oxide.Plugins
 
         private void RegisterCommands()
         {
-            if (ReportEnabled) AddCovalenceCommand("report", "ReportCommand", "discordmessages.report");
+            if (ReportEnabled)
+            {
+                AddCovalenceCommand("report", "ReportCommand", "discordmessages.report");
+                AddCovalenceCommand(new string[] { "reportadmin", "ra" }, "ReportAdminCommand", "discordmessages.admin");
+            }
             if (BanEnabled) AddCovalenceCommand("ban", "BanCommand", "discordmessages.ban");
             if (MessageEnabled) AddCovalenceCommand("message", "MessageCommand", "discordmessages.message");
         }
@@ -224,6 +228,7 @@ namespace Oxide.Plugins
             permission.RegisterPermission("discordmessages.ban", this);
             permission.RegisterPermission("discordmessages.report", this);
             permission.RegisterPermission("discordmessages.message", this);
+            permission.RegisterPermission("discordmessages.admin", this);
         }
 
         private void CheckCfg<T>(string Key, ref T var)
@@ -248,7 +253,7 @@ namespace Oxide.Plugins
                 ["NotFound"] = "Unable to find player {0}",
                 ["NoReports"] = "{0} has not been reported yet!",
                 ["ReportDisallowed"] = "You have been blacklisted from reporting players.",
-                ["ConfirmReportDisallowed"] = "You have {0} {1} from using the report feature!",
+                ["ReportAccessChanged"] = "Report feature for {0} is now {1}",
                 ["ReportReset"] = "You have reset the report count for {0}",
                 ["Cooldown"] = "You must wait {0} seconds to use this command again.",
                 ["AlreadyBanned"] = "{0} is already banned!",
@@ -458,42 +463,51 @@ namespace Oxide.Plugins
 
         #endregion
         #region Report
-
-        private void ReportCommand(IPlayer player, string command, string[] args)
+        private void ReportAdminCommand(IPlayer player, string command, string[] args)
         {
-            if (player.HasPermission(Name + "admin"))
+            var target = GetPlayer(args[1], player, false);
+            if (target == null)
             {
-                var target1 = GetPlayer(args[1], player);
-                if (target1 == null) return;
-                switch (args[0])
-                {
-                    case "disable":
-                        if (storedData.Players.ContainsKey(target1.Id))
-                        {
-                            storedData.Players[target1.Id].ReportDisabled = !storedData.Players[target1.Id].ReportDisabled;
-                        }
-                        else
-                        {
-                            storedData.Players.Add(target1.Id, new PlayerData { ReportDisabled = true });
-                        }
-                        string newval = storedData.Players[target1.Id].ReportDisabled ? "disabled" : "enabled";
-                        player.Reply(GetLang("ConfirmReportDisallowed", player.Id, newval, target1.Name));
-                        break;
-                    case "reset":
-                        if (storedData.Players.ContainsKey(target1.Id))
-                        {
-                            if (storedData.Players[target1.Id].reports != 0)
-                            {
-                                storedData.Players[target1.Id].reports = 0;
-                                player.Reply(GetLang("ReportReset", player.Id, target1.Name));
-                                return;
-                            }
-                        }
-                        player.Reply(GetLang("NoReports", player.Id, target1.Name));
-                        break;
-                }
+                player.Reply(GetLang("NotFound", player.Id, args[1]));
                 return;
             }
+            switch (args[0])
+            {
+                case "enable":
+                    if (storedData.Players.ContainsKey(target.Id))
+                    {
+                        storedData.Players[target.Id].ReportDisabled = false;
+                    }
+                    player.Reply(GetLang("ReportAccessChanged", player.Id, target.Name, "enabled"));
+                    return;
+                case "disable":
+                    if (storedData.Players.ContainsKey(target.Id))
+                    {
+                        storedData.Players[target.Id].ReportDisabled = true;
+                    }
+                    else
+                    {
+                        storedData.Players.Add(target.Id, new PlayerData { ReportDisabled = true });
+                    }
+                    player.Reply(GetLang("ReportAccessChanged", player.Id, target.Name, "disabled"));
+                    return;
+                case "reset":
+                    if (storedData.Players.ContainsKey(target.Id))
+                    {
+                        if (storedData.Players[target.Id].reports != 0)
+                        {
+                            storedData.Players[target.Id].reports = 0;
+                            player.Reply(GetLang("ReportReset", player.Id, target.Name));
+                            return;
+                        }
+                    }
+                    player.Reply(GetLang("NoReports", player.Id, target.Name));
+                    return;
+            }
+
+        }
+        private void ReportCommand(IPlayer player, string command, string[] args)
+        {
             if ((player.Name == "Server Console") | !player.IsConnected)
                 return;
             if (ReportEnabled == false)
@@ -525,7 +539,7 @@ namespace Oxide.Plugins
                 return;
             }
             List<string> reason = args.Skip(1).ToList();
-            var target = GetPlayer(args[0], player);
+            var target = GetPlayer(args[0], player, true);
 
             if (target != null)
             {
@@ -637,7 +651,7 @@ namespace Oxide.Plugins
                 return;
             }
             var reason = args.Length == 1 ? "Banned" : string.Join(" ", args.Skip(1).ToArray());
-            var target = GetPlayer(args[0], player);
+            var target = GetPlayer(args[0], player, false);
             if (target != null)
             {
                 if (target == player)
@@ -647,12 +661,12 @@ namespace Oxide.Plugins
                 }
                 ExecuteBan(target, player, reason);
             }
-            else if (target == null)
+            else
             {
 #if RUST
                 ExectueBanNotExists(args[0], player, reason);
 #else
-                SendMessage(player, GetLang("NotFound"));
+                player.Reply(GetLang("NotFound", player.Id, args[0]));
 #endif
             }
         }
@@ -674,7 +688,6 @@ namespace Oxide.Plugins
 
         private void ExectueBanNotExists(string input, IPlayer player, string reason)
         {
-#if RUST
             ulong output = 0;
             ulong.TryParse(input, out output);
             if (output.IsSteamId())
@@ -692,9 +705,6 @@ namespace Oxide.Plugins
                     SendBanMessage("Unnamed", output.ToString(), reason, player.Name, player.Id);
                 }
             }
-#else
-            return;
-#endif
         }
 
 
@@ -744,7 +754,7 @@ namespace Oxide.Plugins
             storedData = Interface.Oxide.DataFileSystem.ReadObject<StoredData>(Name);
         }
 
-        private IPlayer GetPlayer(string nameOrID, IPlayer player)
+        private IPlayer GetPlayer(string nameOrID, IPlayer player, bool sendError)
         {
             if (IsParseableTo<ulong>(nameOrID) && nameOrID.StartsWith("7656119") && nameOrID.Length == 17)
             {
@@ -781,7 +791,8 @@ namespace Oxide.Plugins
             {
                 case 0:
                     if (!nameOrID.IsSteamId())
-                        SendMessage(player, GetLang("NotFound", player.Id, nameOrID));
+                        if (sendError)
+                            SendMessage(player, GetLang("NotFound", player.Id, nameOrID));
                     break;
 
                 case 1:
