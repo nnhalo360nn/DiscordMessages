@@ -612,7 +612,10 @@ namespace Oxide.Plugins
             fields.Add(new Fields(GetLang("Embed_MuteTarget"), $"[{target.Name}](https://steamcommunity.com/profiles/{target.Id})", true));
             fields.Add(new Fields(GetLang("Embed_MutePlayer"), !player.Id.Equals("server_console") ? $"[{player.Name}](https://steamcommunity.com/profiles/{player.Id})" : player.Name, true));
             fields.Add(new Fields(GetLang("Embed_MuteTime"), timed ? FormatTime(expireDate) : "Permanent", true));
-            fields.Add(new Fields(GetLang("Embed_MuteReason"), reason, false));
+            if (!string.IsNullOrEmpty(reason))
+            {
+                fields.Add(new Fields(GetLang("Embed_MuteReason"), reason, false));
+            }
             FancyMessage message = new FancyMessage(null, false, new FancyMessage.Embeds[1] { new FancyMessage.Embeds(GetLang("Embed_MuteTitle"), MuteColor, fields) });
             Request(MuteURL, message.toJSON());
         }
