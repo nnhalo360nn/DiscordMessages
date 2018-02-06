@@ -9,7 +9,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Oxide.Plugins
 {
-    [Info("DiscordMessages", "Slut", "1.8.1", ResourceId = 2486)]
+    [Info("DiscordMessages", "Slut", "1.8.2", ResourceId = 2486)]
     class DiscordMessages : CovalencePlugin
     {
 
@@ -586,6 +586,7 @@ namespace Oxide.Plugins
                     SendMessage(player, GetLang("ReportTooShort", player.Id));
                     return;
                 }
+                string finalReason = string.Join(" ", reason.ToArray());
                 if (storedData.Players.ContainsKey(target.Id))
                 {
                     storedData.Players[target.Id].reports++;
@@ -600,7 +601,7 @@ namespace Oxide.Plugins
                 fields.Add(new Fields(GetLang("Embed_ReportTarget"), $"[{target.Name}](https://steamcommunity.com/profiles/{target.Id})", true));
                 fields.Add(new Fields(GetLang("Embed_ReportPlayer"), $"[{player.Name}](https://steamcommunity.com/profiles/{player.Id})", true));
                 fields.Add(new Fields(GetLang("Embed_ReportStatus"), status, true));
-                fields.Add(new Fields(GetLang("Embed_ReportReason"), string.Join(" ", reason.ToArray()), false));
+                fields.Add(new Fields(GetLang("Embed_ReportReason"), finalReason, false));
                 fields.Add(new Fields(GetLang("Embed_ReportCount"), storedData.Players[target.Id].reports.ToString(), true));
                 FancyMessage message = new FancyMessage(ReportAlert, false, new FancyMessage.Embeds[1] { new FancyMessage.Embeds(GetLang("Embed_MessageTitle"), ReportColor, fields) });
                 Request(ReportURL, message.toJSON(), (Callback) =>
@@ -617,7 +618,7 @@ namespace Oxide.Plugins
                         }
                         if (ReportLogToConsole)
                         {
-                            Puts($"REPORT ({player.Name}/{player.Id}) -> ({target.Name}/{target.Id}): {reason}");
+                            Puts($"REPORT ({player.Name}/{player.Id}) -> ({target.Name}/{target.Id}): {finalReason}");
                         }
                     }
                     else if (Callback != 429)
