@@ -9,7 +9,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Oxide.Plugins
 {
-    [Info("DiscordMessages", "Slut", "1.8.0", ResourceId = 2486)]
+    [Info("DiscordMessages", "Slut", "1.8.2", ResourceId = 2486)]
     class DiscordMessages : CovalencePlugin
     {
 
@@ -107,10 +107,13 @@ namespace Oxide.Plugins
         private string MessageURL = "https://support.discordapp.com/hc/en-us/articles/228383668-Intro-to-Webhooks";
         private string ChatURL = "https://support.discordapp.com/hc/en-us/articles/228383668-Intro-to-Webhooks";
         private bool ReportEnabled = true;
+        private bool ReportLogToConsole = false;
         private bool ChatEnabled = false;
         private bool ChatTTS = false;
         private bool BanEnabled = true;
         private bool MessageEnabled = true;
+        private bool MessageLogToConsole = false;
+        private bool MessageSuggestAlias = false;
         private string MessageAlert = "";
         private string ReportAlert = "";
         private bool MuteEnabled = true;
@@ -208,6 +211,9 @@ namespace Oxide.Plugins
             CheckCfg<int>("Reports - Embed Color (DECIMAL)", ref ReportColor);
             CheckCfg<int>("Ban - Embed Color (DECIMAL)", ref BanColor);
             CheckCfg<int>("Mute - Embed Color (DECIMAL)", ref MuteColor);
+            CheckCfg<bool>("Message - Log Message command to Console", ref MessageLogToConsole);
+            CheckCfg<bool>("Reports - Log Report command to Console", ref ReportLogToConsole);
+            CheckCfg<bool>("Message - Enable /suggest alias", ref MessageSuggestAlias);
 
             SaveConfig();
         }
@@ -220,7 +226,15 @@ namespace Oxide.Plugins
                 AddCovalenceCommand(new string[] { "reportadmin", "ra" }, "ReportAdminCommand", "discordmessages.admin");
             }
             if (BanEnabled) AddCovalenceCommand("ban", "BanCommand", "discordmessages.ban");
-            if (MessageEnabled) AddCovalenceCommand("message", "MessageCommand", "discordmessages.message");
+            if (MessageEnabled)
+                if (MessageSuggestAlias)
+                {
+                    AddCovalenceCommand(new string[] { "message", "suggest" }, "MessageCommand", "discordmessages.message");
+                }
+                else
+                {
+                    AddCovalenceCommand("message", "MessageCommand", "discordmessages.message");
+                }
         }
 
         private void RegisterPermissions()
@@ -452,6 +466,10 @@ namespace Oxide.Plugins
                         storedData.Players.Add(player.Id, new PlayerData());
                         storedData.Players[player.Id].messageCooldown = DateTime.UtcNow;
                     }
+                    if (MessageLogToConsole)
+                    {
+                        Puts($"MESSAGE ({player.Name}/{player.Id}) : {text}");
+                    }
                 }
                 else if (Callback != 429)
                 {
@@ -596,6 +614,10 @@ namespace Oxide.Plugins
                         {
                             storedData.Players.Add(player.Id, new PlayerData());
                             storedData.Players[player.Id].reportCooldown = DateTime.UtcNow;
+                        }
+                        if (ReportLogToConsole)
+                        {
+                            Puts($"REPORT ({player.Name}/{player.Id}) -> ({target.Name}/{target.Id}): {reason}");
                         }
                     }
                     else if (Callback != 429)
