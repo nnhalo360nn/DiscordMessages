@@ -9,7 +9,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Oxide.Plugins
 {
-    [Info("DiscordMessages", "Slut", "1.8.2", ResourceId = 2486)]
+    [Info("DiscordMessages", "Slut", "1.8.1", ResourceId = 2486)]
     class DiscordMessages : CovalencePlugin
     {
 
