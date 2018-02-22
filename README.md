@@ -11,6 +11,12 @@ All of these features can be enabled/disabled via the config.
 - Message - (/message) - Allows a player with permission to send a message to Discord.
 - Server Chat - Posts to discord once a player types in chat with the option to enable TTS (Text To Speech) 
 
+## Dependencies
+
+### Optional
+
+- [Better Chat Mute](https://umod.org/plugins/betterchatmute)
+
 ## Commands
 
 () = Required - {} = Optional
