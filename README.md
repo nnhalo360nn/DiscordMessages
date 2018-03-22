@@ -30,18 +30,18 @@ All of these features can be enabled/disabled via the config.
 - discordmessages.ban
 - discordmessages.message
 
-
 ## API
 
 There are two API methods. API_SendFancyMessage will send an Embedded message while API_SendTextMessage will send a generic text message.
-```cs
+
+```csharp
 DiscordMessages?.Call("API_SendFancyMessage", (string)WebhookURL, (string)EmbedTitle, (int)EmbedColor, (JSON)Fields);
 DiscordMessages?.Call("API_SendTextMessage", (string)WebhookURL, (string)Message);
  ```
  
- In order to create the fields required for an Embedded message you simply create an fields object with an array of fields as follows.
+In order to create the fields required for an Embedded message you simply create an fields object with an array of fields as follows.
  
-```cs
+```csharp
 object fields = new[]
 {
   new {
